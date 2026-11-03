@@ -1,8 +1,8 @@
 """Audit legal moves, final checkmate, and exhaustive defense/escape certificates."""
 
-from contract import LineOutput, LineStep, MateStatus, ProofReason, Side
+from contract import LineInput, LineOutput, LineStep, MateStatus, ProofReason, Side
 
-from .board import checked, fen, insufficient, legal_moves, parse, require
+from .board import checked, fen, insufficient, legal_moves, notation, parse, require
 
 
 def verdict(valid, message, **details):
@@ -116,21 +116,41 @@ def check_strategy(given, made):
     winning = replay(0, initial, depth)
     require(len(seen) == len(made.proof), "proof includes unreachable extra nodes")
     require(made.status == (MateStatus.FORCED_MATE if winning else MateStatus.NO_FORCED_MATE), "wrong mate outcome")
+    actor = "White" if initial.turn == "w" else "Black"
     if winning:
         require(made.first_move == made.proof[0].children[0].move, "first move differs from the winning strategy")
-        line, index, position = [], 0, initial
+        line, labels, index, position = [], [], 0, initial
         while made.proof[index].children:
             edge = made.proof[index].children[0]
-            position = legal_moves(position)[edge.move]
+            legal = legal_moves(position)
+            labels.append(notation(position, edge.move, legal))
+            position = legal[edge.move]
             line.append(line_step(edge.move, position, legal_moves(position)))
             index = edge.child
         require(
             line and line[-1].checkmate and made.line == line, "illustrative line is not the certified legal mate line"
         )
+        require(made.line_audit is not None, "winning result is missing its automatic line audit")
+        audit_input = LineInput(given.fen, [item.move for item in line])
+        check_line(audit_input, made.line_audit)
+        require(made.line_audit.is_mating_line, "automatic audit does not certify the original side's mating line")
+        answer = (
+            f"{actor} can force checkmate within {given.max_moves} move(s). "
+            f"Play {labels[0]} ({line[0].move}). Example: {' '.join(labels)}. "
+            "The line audit confirms every move is legal and the final move is checkmate. "
+            "The strategy certificate covers every legal defense. "
+            "Puzzle rules exclude repetition and move-count draws."
+        )
     else:
         require(
             made.first_move is None and not made.line, "a negative result cannot advertise a winning move or mate line"
         )
+        require(made.line_audit is None, "negative result cannot include a winning line audit")
+        answer = (
+            f"{actor} has no forced mate within {given.max_moves} move(s). Longer wins may still exist. "
+            "Puzzle rules exclude repetition and move-count draws."
+        )
+    require(made.answer == answer, "ready answer or algebraic notation differs from the verified result")
 
 
 def check_result(tool, given, made):

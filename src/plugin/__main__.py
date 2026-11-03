@@ -22,7 +22,8 @@ WORKSPACE_ENV = "NANOAGENT_WORKSPACE"
 IMPLEMENTATIONS = {Tool.FIND_FORCED_MATE: find_forced_mate, Tool.CHECK_MATE_LINE: check_mate_line}
 DESCRIPTIONS = {
     Tool.FIND_FORCED_MATE: "Find forced mate within 1, 2, or 3 attacker moves from a six-field FEN; "
-    "prove every legal defense. A budget error is undecided, not no mate.",
+    "prove every legal defense, automatically audit the returned line, and return a ready answer. "
+    "A budget error is undecided, not no mate.",
     Tool.CHECK_MATE_LINE: "Check up to 12 UCI moves from a six-field FEN for legality and final checkmate; "
     "a legal mating line alone does not prove forced mate.",
 }

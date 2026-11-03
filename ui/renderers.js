@@ -33,6 +33,8 @@ export default {
     const winning = value.status === "forced_mate";
     return h("section", { class: "chess" },
       statusPill("Verified analysis", "ok"),
+      h("p", { class: "ready-answer", text: value.answer }),
+      value.line_audit ? statusPill("Automatic line audit: legal moves, final checkmate", "ok") : null,
       h("h3", { text: winning ? "Forced mate within " + value.request.max_moves + " move(s)" : "No forced mate within " + value.request.max_moves + " move(s)" }),
       h("p", { text: winning ? "Play " + value.first_move + ". The certificate covers every legal defense." : "The certificate supplies an escape against every candidate first move. Longer wins may still exist." }),
       board(value.request.fen),

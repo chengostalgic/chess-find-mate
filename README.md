@@ -14,7 +14,7 @@ history-free puzzles; the result card states this limitation.
 
 | Tool | Input → output | Purpose |
 |---|---|---|
-| `find_forced_mate` | `MateInput` → `MateOutput` | Find mate within 1, 2, or 3 attacker moves, with a complete-defense or no-mate certificate. |
+| `find_forced_mate` | `MateInput` → `MateOutput` | Find mate within 1, 2, or 3 attacker moves, audit its exact line, and return a checked ready answer and certificate in one call. |
 | `check_mate_line` | `LineInput` → `LineOutput` | Check up to 12 ordered UCI moves, identify an illegal move, and check final mate/winner. |
 
 | Task | Runner/tool | Purpose |
@@ -24,12 +24,20 @@ history-free puzzles; the result card states this limitation.
 
 ### Chat workflow
 
-The chat model routes requests to Python tools and summarizes their verified
-results. It calls the requested mate bound once, uses the returned move/line,
-and keeps its final answer short. If a separate line audit is requested, it
-passes that exact line and starting FEN to `mate-line`. It should not spend its
-response budget re-solving chess or testing invented candidates. This prompt
-policy needs hosted testing; the model's token budget is controlled by the host.
+The chat model copies the FEN and bound into one search call. Python searches,
+runs `check_mate_line` on that exact continuation and original FEN, and formats a
+short answer including standard algebraic notation. The output's `answer` is
+ready to display and its `line_audit` contains the actual checker result. The
+independent verifier checks both. No second model call is needed to construct a
+line-check request, translate notation, or re-solve the proof. `mate-line` remains
+available for a user's separately proposed continuation.
+
+This reduces work **after the task is invoked**. It does not force the host model
+to make the first call. A user reported that v0.1.1 exhausted its response while
+manually solving a simple position before calling a task. Version 0.2.0 changes
+the backend workflow, but its hosted effectiveness still requires live testing.
+The plugin manifest cannot control the host's reasoning budget or guarantee
+tool selection. A hard tool-first guarantee requires host-side execution control.
 
 ### Try it in chat
 
@@ -120,6 +128,14 @@ insufficient material, or checkmate of the attacker. Its claim is only bounded
 nonexistence. Missing defenses, shared/cyclic/unreachable proof nodes, wrong
 leaf reasons, illegal moves, and contradictory outcomes fail verification.
 Different correct winning moves and valid strategy certificates are accepted.
+
+The search output includes `answer`, `request`, `status`, `first_move`, `line`,
+`line_audit`, and `proof`. For a positive result, `line_audit` is a full
+`LineOutput` for the original FEN and returned UCI line. For a negative result,
+it is null. The ready answer reports only facts checked by the verifier; it does
+not claim a shortest mate or a unique winning move. Its SAN notation is generated
+by python-chess and independently reconstructed by the verifier, including
+captures, disambiguation, castling, promotion, check, and mate suffixes.
 
 The runtime uses python-chess and bounded search. The verifier imports no chess
 library or runtime code. It parses FEN independently, represents the board as

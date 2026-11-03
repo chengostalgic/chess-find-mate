@@ -1,7 +1,7 @@
 _ > nanoagent.plugin.v0001.ManifestConfig:
 id: chess-forced-mate
 name: Chess Forced Mate
-version: 0.1.1
+version: 0.2.0
 status: ready
 spec: nanoagent.plugin/v0001
 
@@ -17,30 +17,25 @@ permissions > nanoagent.plugin.v0001.PermissionsConfig:
 
 tools > dict[contract.Tool, nanoagent.plugin.v0001.ToolConfig]:
   find_forced_mate:
-    description: Find a forced checkmate for the side to move within 1, 2, or 3 attacker moves from a complete standard FEN. Return a complete-defense strategy certificate and illustrative mate line, or a checkable no-mate-within-bound certificate. Resource exhaustion raises undecided, never no mate.
+    description: Find a forced checkmate for the side to move within 1, 2, or 3 attacker moves from a complete standard FEN. Return a ready answer, complete-defense proof, and automatically audited mating line, or a checkable no-mate-within-bound certificate. Resource exhaustion raises undecided, never no mate.
   check_mate_line:
     description: Check 0 to 12 ordered UCI moves from a complete standard FEN. Identify the first illegal move, replay the legal prefix, and report final checkmate and winner. A legal mating line alone does not prove forced mate against other defenses.
 
 tasks > dict[contract.Task, nanoagent.plugin.v0001.TaskConfig]:
   forced-mate:
     description: >-
-      Find forced mate within 1-3 attacker turns from complete standard FEN;
-      default to 1 only when unspecified. ROUTE, CALL, SUMMARIZE. This Python
-      task searches and independently verifies chess; do not guess moves,
-      recalculate attacks, or replay proof nodes in your reasoning. Require
-      supplied castling/en-passant rights; clarify missing facts, never ask for
-      JSON. Call the requested bound once; shorter horizons are searched internally.
-      Compare multiple bounds only when explicitly requested.
-      If verdict.valid is true, use output directly. On success, report first_move
-      and one output.line; the certificate covers every legal defense. A first
-      move in a longer mate may be quiet. If a separate line audit is requested,
-      immediately call mate-line once with the ORIGINAL FEN and EXACT moves from
-      output.line. Never substitute a guess or claim an unreturned checker result.
-      Negative means no forced mate within the bound; a budget error is undecided;
-      a failed verdict is unverified. Finish in at most 100 words, with brief
-      standard notation if requested. No repeated self-correction or identical
-      calls. State briefly that repetition/move-count draws and prior-history
-      reconstruction are excluded. No Chess960 or general best-move evaluation.
+      Chess calculator. INPUT COPYING IS THE ONLY WORK BEFORE THIS CALL: copy the
+      complete user FEN into fen and requested bound into max_moves (1-3; default 1).
+      Do not decode the board, guess moves, or solve the puzzle before calling.
+      Python searches, audits the exact winning line, and formats chess notation
+      and the final answer IN ONE CALL. Once verdict.valid is true, return
+      output.answer; it is independently checked and ready to display. Do not
+      replay proof nodes or call mate-line again for this computed line: its actual
+      checker result is already in output.line_audit. A negative is only bounded
+      nonexistence; a resource error is undecided. For user-supplied continuations
+      use mate-line instead. Ask only for genuinely missing input (especially
+      historical rights when no complete FEN was supplied), never JSON. This is
+      history-free standard chess: repetition/move-count draws are excluded.
     runner: tool
     tools: [find_forced_mate]
     reference: null
@@ -50,7 +45,10 @@ tasks > dict[contract.Task, nanoagent.plugin.v0001.TaskConfig]:
       reversed for escape certificates. Every positive leaf must be actual
       checkmate of the defender, and all edges must be legal from their preceding
       positions. The independent verifier uses its own standard-library board
-      rules, not the runtime chess library. At most 50000 searched positions and
+      rules and algebraic notation, not the runtime chess library. Automatically
+      run check_mate_line on the exact solver continuation and original FEN, return
+      its result as line_audit, and include a concise verified answer. No second
+      model call is needed to audit the line or write the answer. At most 50000 searched positions and
       4096 certificate nodes are supported; exceeding either raises an explicit
       undecided error without a fabricated verdict. Puzzle rules ignore repetition
       and move-count draws, and treat detected insufficient material as terminal.

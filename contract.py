@@ -39,7 +39,7 @@ class ProofReason(Enum):
 class MateInput(Output):
     fen: Annotated[
         str,
-        "Complete six-field standard-chess FEN, including side to move, castling and en-passant rights. "
+        "Copy the complete six-field FEN exactly; Python decodes the board. No move calculation is needed to call. "
         "Side to move is the attacker. A diagram alone does not establish historical rights; clarify missing facts.",
     ]
     max_moves: Annotated[
@@ -75,17 +75,6 @@ class ProofNode(Output):
 
 
 @dataclass
-class MateOutput(Output):
-    request: MateInput
-    status: MateStatus
-    first_move: Annotated[str | None, "First certified winning move, or null when no mate within the bound"]
-    line: Annotated[list[LineStep], "One illustrative legal mate line from the strategy; [] for no forced mate"]
-    proof: Annotated[
-        list[ProofNode], "Flat complete-defense or escape certificate; root at index 0, at most 4096 nodes"
-    ]
-
-
-@dataclass
 class LineInput(Output):
     fen: Annotated[str, "Complete six-field standard-chess starting FEN; historical rights must be stated"]
     moves: Annotated[list[str], "0 to 12 UCI coordinate moves in order, with q/r/b/n suffix for promotion"]
@@ -107,6 +96,21 @@ class LineOutput(Output):
         "True only for a nonempty legal line ending in checkmate by the original side to move. "
         "A mating line alone does not prove the opponent cannot defend differently.",
     ]
+
+
+@dataclass
+class MateOutput(Output):
+    answer: Annotated[str, "Ready-to-display answer, including checked SAN, independently verified with the result"]
+    request: MateInput
+    status: MateStatus
+    first_move: Annotated[str | None, "First certified winning UCI move, or null when no mate within the bound"]
+    line: Annotated[list[LineStep], "One illustrative legal mate line; [] for no forced mate"]
+    line_audit: Annotated[
+        LineOutput | None,
+        "The actual line-checker result for the exact returned line and original FEN, executed inside this call; "
+        "null for no forced mate. No second chat tool call is needed.",
+    ]
+    proof: Annotated[list[ProofNode], "Complete-defense or escape certificate; root 0, at most 4096 nodes"]
 
 
 TOOLS = {Tool.FIND_FORCED_MATE: (MateInput, MateOutput), Tool.CHECK_MATE_LINE: (LineInput, LineOutput)}

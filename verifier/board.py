@@ -261,3 +261,39 @@ def insufficient(position):
     if len(material) <= 1:
         return True
     return all(p == "b" for _, p in material) and len({(sq % 8 + sq // 8) % 2 for sq, _ in material}) == 1
+
+
+def notation(position, move, legal):
+    """Standard algebraic notation derived from our own legal moves and attacks."""
+    require(move in legal, "notation requires a legal move")
+    start, end = square(move[:2]), square(move[2:4])
+    piece = position.board[start].upper()
+    capture = position.board[end] != "." or (piece == "P" and start % 8 != end % 8)
+    if piece == "K" and abs(end - start) == 2:
+        text = "O-O" if end > start else "O-O-O"
+    else:
+        text = "" if piece == "P" else piece
+        if piece == "P" and capture:
+            text += move[0]
+        elif piece != "P":
+            rivals = [
+                square(candidate[:2])
+                for candidate in legal
+                if candidate[:2] != move[:2]
+                and candidate[2:4] == move[2:4]
+                and position.board[square(candidate[:2])].upper() == piece
+            ]
+            if rivals:
+                if all(other % 8 != start % 8 for other in rivals):
+                    text += move[0]
+                elif all(other // 8 != start // 8 for other in rivals):
+                    text += move[1]
+                else:
+                    text += move[:2]
+        text += ("x" if capture else "") + move[2:4]
+        if len(move) == 5:
+            text += "=" + move[4].upper()
+    following = legal[move]
+    if checked(following):
+        text += "+" if legal_moves(following) else "#"
+    return text

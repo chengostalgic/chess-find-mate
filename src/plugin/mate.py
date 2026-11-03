@@ -146,10 +146,35 @@ def find_forced_mate(value: MateInput, workspace: Path) -> MateOutput:
             move, cursor = cursor.children[0]
             board.push_uci(move)
             line.append(step(move, board))
+    actor = "White" if attacker else "Black"
+    audit = None
+    if result.winning:
+        audit = check_mate_line(LineInput(value.fen, [item.move for item in line]), workspace)
+        if not audit.legal or not audit.is_mating_line:
+            raise ValueError("search result failed its automatic line audit")
+        notation, display = [], load(value.fen)
+        for item in line:
+            move = chess.Move.from_uci(item.move)
+            notation.append(display.san(move))
+            display.push(move)
+        answer = (
+            f"{actor} can force checkmate within {value.max_moves} move(s). "
+            f"Play {notation[0]} ({line[0].move}). Example: {' '.join(notation)}. "
+            "The line audit confirms every move is legal and the final move is checkmate. "
+            "The strategy certificate covers every legal defense. "
+            "Puzzle rules exclude repetition and move-count draws."
+        )
+    else:
+        answer = (
+            f"{actor} has no forced mate within {value.max_moves} move(s). Longer wins may still exist. "
+            "Puzzle rules exclude repetition and move-count draws."
+        )
     return MateOutput(
+        answer,
         value,
         MateStatus.FORCED_MATE if result.winning else MateStatus.NO_FORCED_MATE,
         result.children[0][0] if result.winning else None,
         line,
+        audit,
         proof,
     )

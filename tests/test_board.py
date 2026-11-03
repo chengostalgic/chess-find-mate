@@ -8,7 +8,7 @@ import pytest
 import verifier
 from contract import LineInput
 from plugin import check_mate_line
-from verifier.board import checked, fen, insufficient, legal_moves, parse
+from verifier.board import checked, fen, insufficient, legal_moves, notation, parse
 
 START = chess.STARTING_FEN
 KIWIPETE = "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1"
@@ -36,6 +36,7 @@ def test_240_seeded_playout_positions_and_every_child_fen(start):
         assert set(legal) == {m.uci() for m in board.legal_moves}
         assert checked(ours) == board.is_check() and insufficient(ours) == board.is_insufficient_material()
         for move, following in legal.items():
+            assert notation(ours, move, legal) == board.san(chess.Move.from_uci(move))
             board.push_uci(move)
             assert fen(following) == board.fen(en_passant="fen")
             assert checked(following) == board.is_check()

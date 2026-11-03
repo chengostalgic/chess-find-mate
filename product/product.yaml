@@ -2,11 +2,11 @@ _ > nanoagent.plugin.v0001.ProductConfig:
 tagline: "Find a mate. Check every defense."
 summary: >-
   Solve standard-chess mate-in-one puzzles and bounded mate-in-two or three.
-  Inspect a legal mating line and a complete-defense certificate, or check your
-  own continuation for illegal moves and final checkmate.
+  Get a ready answer, an automatically checked mating line, and a complete-defense
+  certificate in one call, or check your own proposed continuation separately.
 highlights:
   - "Find a forced mate, with every legal defense covered."
-  - "Check your own move sequence and locate its first illegal move."
+  - "Search, audit the winning line, and format the answer in one call."
   - "Handle castling, en passant, pins, and all promotion choices."
   - "Explore board diagrams and independently checked mate evidence."
 steps:

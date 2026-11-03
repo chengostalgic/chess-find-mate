@@ -43,10 +43,12 @@ def test_declared_puzzle_and_line_examples(path, tmp_path):
     assert given == original and not list(tmp_path.iterdir())
 
 
-@pytest.mark.parametrize("field", ["request", "status", "first_move", "line", "proof"])
+@pytest.mark.parametrize("field", ["answer", "request", "status", "first_move", "line", "line_audit", "proof"])
 def test_every_mate_result_field_is_checked(field, tmp_path):
     given, made = result("mate-one", tmp_path)
     wrong = {
+        "answer": "Qh4 is always mate.",
+        "line_audit": None,
         "request": replace(given, max_moves=2),
         "status": MateStatus.NO_FORCED_MATE,
         "first_move": "g6h6",
@@ -128,6 +130,13 @@ def test_an_alternative_valid_winning_move_is_accepted(tmp_path):
         made,
         first_move=move,
         line=line.steps,
+        line_audit=line,
+        answer=(
+            "White can force checkmate within 1 move(s). Play f8=R# (f7f8r). Example: f8=R#. "
+            "The line audit confirms every move is legal and the final move is checkmate. "
+            "The strategy certificate covers every legal defense. "
+            "Puzzle rules exclude repetition and move-count draws."
+        ),
         proof=[ProofNode(True, ProofReason.BRANCH, [ProofEdge(move, 1)]), ProofNode(True, ProofReason.CHECKMATE, [])],
     )
     assert verifier.verify_task("forced-mate", given, alternative, None, "")["valid"]
@@ -227,3 +236,56 @@ def test_proof_budget_exhaustion_is_undecided(monkeypatch, tmp_path):
     monkeypatch.setattr(engine, "PROOF_LIMIT", 1)
     with pytest.raises(ValueError, match="undecided"):
         find_forced_mate(given, tmp_path)
+
+
+@pytest.mark.parametrize(
+    "name", ["black-mate", "mate-one", "mate-two", "mate-three", "castle-mate", "en-passant-mate", "promotion-mate"]
+)
+def test_search_returns_an_automatically_checked_ready_answer(name, tmp_path):
+    given, made = result(name, tmp_path)
+    assert made.line_audit.request == LineInput(given.fen, [step.move for step in made.line])
+    assert made.line_audit.legal and made.line_audit.ends_in_checkmate and made.line_audit.is_mating_line
+    assert len(made.answer.split()) < 100 and "Play " in made.answer
+    assert verifier.verify_task("forced-mate", given, made, None, "")["valid"]
+
+
+@pytest.mark.parametrize(
+    "field",
+    ["request", "legal", "first_illegal_index", "steps", "final_fen", "ends_in_checkmate", "winner", "is_mating_line"],
+)
+def test_nested_line_audit_is_fully_checked(field, tmp_path):
+    given, made = result("black-mate", tmp_path)
+    wrong = {
+        "request": LineInput(given.fen, []),
+        "legal": False,
+        "first_illegal_index": 0,
+        "steps": [],
+        "final_fen": given.fen,
+        "ends_in_checkmate": False,
+        "winner": Side.WHITE,
+        "is_mating_line": False,
+    }
+    bad = replace(made, line_audit=replace(made.line_audit, **{field: wrong[field]}))
+    assert not verifier.verify_task("forced-mate", given, bad, None, "")["valid"]
+
+
+def test_search_calls_line_checker_once_with_exact_returned_moves(monkeypatch, tmp_path):
+    import plugin.mate as engine
+
+    calls = []
+    original = engine.check_mate_line
+
+    def record(given, workspace):
+        calls.append(given)
+        return original(given, workspace)
+
+    monkeypatch.setattr(engine, "check_mate_line", record)
+    given, _ = fixture("mate-three")
+    made = engine.find_forced_mate(given, tmp_path)
+    assert calls == [LineInput(given.fen, [step.move for step in made.line])]
+
+
+def test_nonmate_has_no_false_audit_or_winning_summary(tmp_path):
+    given, made = result("two-not-one", tmp_path)
+    assert made.line_audit is None and "has no forced mate within 1" in made.answer
+    assert verifier.verify_task("forced-mate", given, made, None, "")["valid"]
