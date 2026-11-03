@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "nanoagent-chess-forced-mate"
-version = "0.1.0"
+version = "0.1.1"
 description = "Chess Forced Mate: legal-move and complete-defense mate certificates"
 requires-python = ">=3.12"
 dependencies = ["mcp>=1.27,<2", "slimconfig", "chess>=1.11.2,<2"]

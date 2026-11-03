@@ -22,6 +22,15 @@ history-free puzzles; the result card states this limitation.
 | `forced-mate` | `tool` / `find_forced_mate` | Solve a bounded forced-mate puzzle. |
 | `mate-line` | `tool` / `check_mate_line` | Audit a proposed continuation, without claiming it is forced. |
 
+### Chat workflow
+
+The chat model routes requests to Python tools and summarizes their verified
+results. It calls the requested mate bound once, uses the returned move/line,
+and keeps its final answer short. If a separate line audit is requested, it
+passes that exact line and starting FEN to `mate-line`. It should not spend its
+response budget re-solving chess or testing invented candidates. This prompt
+policy needs hosted testing; the model's token budget is controlled by the host.
+
 ### Try it in chat
 
 ```text
