@@ -1,0 +1,90 @@
+_ > nanoagent.plugin.v0001.ManifestConfig:
+id: chess-forced-mate
+name: Chess Forced Mate
+version: 0.1.0
+status: ready
+spec: nanoagent.plugin/v0001
+
+runtime > nanoagent.plugin.v0001.RuntimeConfig:
+  type: mcp_stdio
+  command: [uv, run, --frozen, python, -m, plugin]
+
+permissions > nanoagent.plugin.v0001.PermissionsConfig:
+  network > nanoagent.plugin.v0001.NetworkConfig:
+    hosts: []
+  filesystem > nanoagent.plugin.v0001.FilesystemConfig:
+    write: [workspace]
+
+tools > dict[contract.Tool, nanoagent.plugin.v0001.ToolConfig]:
+  find_forced_mate:
+    description: Find a forced checkmate for the side to move within 1, 2, or 3 attacker moves from a complete standard FEN. Return a complete-defense strategy certificate and illustrative mate line, or a checkable no-mate-within-bound certificate. Resource exhaustion raises undecided, never no mate.
+  check_mate_line:
+    description: Check 0 to 12 ordered UCI moves from a complete standard FEN. Identify the first illegal move, replay the legal prefix, and report final checkmate and winner. A legal mating line alone does not prove forced mate against other defenses.
+
+tasks > dict[contract.Task, nanoagent.plugin.v0001.TaskConfig]:
+  forced-mate:
+    description: >-
+      Find a winning chess move by proving forced CHECKMATE for the side to move,
+      within max_moves 1, 2, or 3 attacker turns (1, 3, or 5 plies). Default to
+      max_moves 1 when unspecified. Accept a complete six-field standard FEN or
+      a clear piece/square description; construct the typed arguments yourself,
+      never ask users to write JSON. Preserve every piece, side to move, castling
+      and en-passant rights. A diagram alone does not establish those historical
+      rights: clarify missing facts rather than inventing them. If the user
+      explicitly says no castling or en passant, use - for those fields. Counters
+      can be 0 1 for an explicitly history-free composed puzzle. Explain that
+      this is mate-puzzle analysis, excluding repetition and move-count draw
+      adjudications, not a full tournament arbiter or a general best-move engine.
+      Call the tool rather than guessing a tactical move. A positive result must
+      cover EVERY legal defense at opponent nodes, including nonchecking replies;
+      one cooperative line is not a forced-mate proof. Show first_move and the
+      returned line, saying that the line illustrates a complete checked strategy.
+      UCI e2e4 means move from e2 to e4; promotion a7a8n means promote to knight;
+      e1g1/e1c1 are standard castling. All promotions, castling, pins, en passant,
+      check evasion, and king safety are handled. Do not claim mate in exactly N
+      or a unique best move: the result proves mate WITHIN the bound and returns
+      one strategy, not all winning moves. A negative means no forced mate within
+      this bound, not that the position is lost or has no longer winning plan.
+      A resource-limit error means undecided, not a negative result. Requests for
+      deeper mate, Chess960, other variants, material evaluations, or full game
+      adjudication are outside scope. Starting FEN history/reachability is assumed;
+      static input checks cannot reconstruct the entire previous game.
+    runner: tool
+    tools: [find_forced_mate]
+    reference: null
+    instructions: >-
+      Search all legal move types to a bounded alternating horizon. Prove attacker
+      choices existentially and defender replies universally, with the quantifiers
+      reversed for escape certificates. Every positive leaf must be actual
+      checkmate of the defender, and all edges must be legal from their preceding
+      positions. The independent verifier uses its own standard-library board
+      rules, not the runtime chess library. At most 50000 searched positions and
+      4096 certificate nodes are supported; exceeding either raises an explicit
+      undecided error without a fabricated verdict. Puzzle rules ignore repetition
+      and move-count draws, and treat detected insufficient material as terminal.
+  mate-line:
+    description: >-
+      Check a proposed chess continuation for legal moves and final checkmate.
+      Use a complete six-field FEN and 0 to 12 ordered UCI coordinate moves. Users
+      may speak ordinary language; convert only when the origin, destination, and
+      promotion are unambiguous, otherwise clarify. Never ask for JSON. Preserve
+      side to move, castling/en-passant rights, every move and its order. Report
+      legal, first_illegal_index (zero based), ends_in_checkmate, winner, and
+      is_mating_line. That last field is true only for a nonempty legal line
+      ending with mate by the ORIGINAL side to move. A line can be legal and end
+      in the opponent winning; report that accurately. A valid verifier verdict
+      means the analysis is correct, not that the proposed line is legal or wins.
+      A legal mating line is not evidence of a forced mate against every defense;
+      use forced-mate when that is the question. Moves after mate or detected
+      insufficient material are rejected. The same history-free mate-puzzle
+      limitations apply: no repetition/move-count adjudication or retrograde proof.
+    runner: tool
+    tools: [check_mate_line]
+    reference: null
+    instructions: >-
+      Independently check each move from its preceding legal position, stop before
+      the first illegal move, and return all legal-prefix FENs with check/mate
+      flags. Final FEN is after that prefix. ends_in_checkmate and winner must be
+      false/null if any supplied move is illegal, even if the legal prefix ended
+      in mate. Checkmate requires the king in check and NO legal response;
+      stalemate is not mate. Verify every returned field using independent rules.

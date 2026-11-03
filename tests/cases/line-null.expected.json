@@ -1,0 +1,8 @@
+{
+  "task": "mate-line",
+  "legal": false,
+  "first_illegal_index": 0,
+  "ends_in_checkmate": false,
+  "winner": null,
+  "is_mating_line": false
+}

@@ -1,0 +1,11 @@
+.chess { display: grid; gap: 12px; color: var(--text); font-family: var(--sans); }
+.chess > .pill { justify-self: start; }
+.chess .chessboard { display: grid; grid-template-columns: repeat(8, 1fr); width: min(100%, 416px); aspect-ratio: 1; border: 2px solid var(--line); }
+.chess .square { display: grid; position: relative; place-items: center; min-width: 0; font-size: clamp(18px, 5vw, 36px); line-height: 1; }
+.chess .light { background: #eadfc7; }
+.chess .dark { background: #8c9e88; }
+.chess .coordinate { position: absolute; top: 2px; left: 2px; font-size: 8px; color: #243125; }
+.chess .white-piece { color: #fff; text-shadow: 0 1px 2px #111, 1px 0 2px #111; }
+.chess .black-piece { color: #17202a; }
+.chess .fen { display: block; overflow-wrap: anywhere; font-size: 11px; }
+.chess .disclosure-body { display: grid; gap: 10px; }
